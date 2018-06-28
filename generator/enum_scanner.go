@@ -9,8 +9,9 @@ import (
 	"strings"
 
 	"github.com/go-courier/codegen"
-	"github.com/go-courier/enumeration"
 	"golang.org/x/tools/go/loader"
+
+	"github.com/go-courier/enumeration"
 )
 
 func NewEnumScanner(program *loader.Program) *EnumScanner {

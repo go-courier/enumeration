@@ -3,6 +3,7 @@ package enumeration
 import (
 	"fmt"
 	"strconv"
+
 	"github.com/stretchr/testify/assert"
 )
 

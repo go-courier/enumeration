@@ -9,10 +9,11 @@ import (
 	"sort"
 
 	"github.com/go-courier/codegen"
-	"github.com/go-courier/enumeration"
 	"github.com/go-courier/loaderx"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/tools/go/loader"
+
+	"github.com/go-courier/enumeration"
 )
 
 func NewEnumGenerator(program *loader.Program, rootPkgInfo *loader.PackageInfo) *EnumGenerator {
@@ -146,7 +147,6 @@ func (e *Enum) WriteStringParser(file *codegen.File) {
 		),
 	)
 
-	file.WriteRune('\n')
 }
 
 func (e *Enum) WriteLabelStringParser(file *codegen.File) {
@@ -178,8 +178,6 @@ func (e *Enum) WriteLabelStringParser(file *codegen.File) {
 			codegen.Return(e.ConstUnknown(), e.VarInvalidError()),
 		),
 	)
-
-	file.WriteRune('\n')
 }
 
 func (e *Enum) WriteStringer(file *codegen.File) {
@@ -211,7 +209,6 @@ func (e *Enum) WriteStringer(file *codegen.File) {
 		),
 	)
 
-	file.WriteRune('\n')
 }
 
 func (e *Enum) WriteInt(file *codegen.File) {
@@ -224,7 +221,6 @@ func (e *Enum) WriteInt(file *codegen.File) {
 		),
 	)
 
-	file.WriteRune('\n')
 }
 
 func (e *Enum) WriteLabeler(file *codegen.File) {
@@ -256,7 +252,6 @@ func (e *Enum) WriteLabeler(file *codegen.File) {
 		),
 	)
 
-	file.WriteRune('\n')
 }
 
 func (e *Enum) WriteTypeNameAndConstValues(file *codegen.File) {
@@ -268,8 +263,6 @@ func (e *Enum) WriteTypeNameAndConstValues(file *codegen.File) {
 			codegen.Return(file.Val(e.Name())),
 		),
 	)
-
-	file.WriteRune('\n')
 
 	tpe := codegen.Slice(codegen.Type(file.Use("github.com/go-courier/enumeration", "Enum")))
 
@@ -298,7 +291,6 @@ func (e *Enum) WriteTypeNameAndConstValues(file *codegen.File) {
 		),
 	)
 
-	file.WriteRune('\n')
 }
 
 func (e *Enum) TextMarshalerAndTextUnmarshaler(file *codegen.File) {
@@ -307,9 +299,9 @@ func (e *Enum) TextMarshalerAndTextUnmarshaler(file *codegen.File) {
 			MethodOf(codegen.Var(codegen.Type(e.Name()), "v")).
 			Named("MarshalText").
 			Return(
-				codegen.Var(codegen.Slice(codegen.Byte)),
-				codegen.Var(codegen.Error),
-			).Do(
+			codegen.Var(codegen.Slice(codegen.Byte)),
+			codegen.Var(codegen.Error),
+		).Do(
 			file.Expr(`str := v.String()`),
 			codegen.If(file.Expr(`str == ?`, "UNKNOWN")).Do(
 				codegen.Return(codegen.Nil, e.VarInvalidError()),
@@ -317,8 +309,6 @@ func (e *Enum) TextMarshalerAndTextUnmarshaler(file *codegen.File) {
 			codegen.Return(file.Expr(`[]byte(str)`), codegen.Nil),
 		),
 	)
-
-	file.WriteRune('\n')
 
 	file.WriteBlock(
 		codegen.Func(codegen.Var(codegen.Slice(codegen.Byte), "data")).
@@ -330,7 +320,6 @@ func (e *Enum) TextMarshalerAndTextUnmarshaler(file *codegen.File) {
 		),
 	)
 
-	file.WriteRune('\n')
 }
 
 func (e *Enum) TextScanAndValuer(file *codegen.File) {
@@ -344,15 +333,13 @@ if o, ok := (interface{})(v).(?); ok {
 			MethodOf(codegen.Var(codegen.Type(e.Name()), "v")).
 			Named("Value").
 			Return(
-				codegen.Var(codegen.Type(file.Use("database/sql/driver", "Value"))),
-				codegen.Var(codegen.Error),
-			).Do(
+			codegen.Var(codegen.Type(file.Use("database/sql/driver", "Value"))),
+			codegen.Var(codegen.Error),
+		).Do(
 			offsetExprs,
 			codegen.Return(file.Expr("int(v) + offset"), codegen.Nil),
 		),
 	)
-
-	file.WriteRune('\n')
 
 	file.WriteBlock(
 		codegen.Func(codegen.Var(codegen.Interface(), "src")).
@@ -375,5 +362,4 @@ return nil
 		),
 	)
 
-	file.WriteRune('\n')
 }
