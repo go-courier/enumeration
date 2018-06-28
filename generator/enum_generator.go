@@ -6,13 +6,13 @@ import (
 	"go/types"
 	"path"
 	"path/filepath"
+	"sort"
 
 	"github.com/go-courier/codegen"
+	"github.com/go-courier/enumeration"
 	"github.com/go-courier/loaderx"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/tools/go/loader"
-
-	"github.com/go-courier/enumeration"
 )
 
 func NewEnumGenerator(program *loader.Program, rootPkgInfo *loader.PackageInfo) *EnumGenerator {
@@ -88,6 +88,7 @@ func (e *Enum) WriteToFile(file *codegen.File) {
 	e.WriteStringer(file)
 	e.WriteStringParser(file)
 	e.WriteLabeler(file)
+	e.WriteInt(file)
 	e.WriteTypeNameAndConstValues(file)
 	e.TextMarshalerAndTextUnmarshaler(file)
 	e.TextScanAndValuer(file)
@@ -213,6 +214,19 @@ func (e *Enum) WriteStringer(file *codegen.File) {
 	file.WriteRune('\n')
 }
 
+func (e *Enum) WriteInt(file *codegen.File) {
+	file.WriteBlock(
+		codegen.Func().
+			MethodOf(codegen.Var(codegen.Type(e.Name()), "v")).
+			Named("Int").
+			Return(codegen.Var(codegen.Int)).Do(
+			codegen.Return(file.Expr("int(v)")),
+		),
+	)
+
+	file.WriteRune('\n')
+}
+
 func (e *Enum) WriteLabeler(file *codegen.File) {
 	clauses := []*codegen.SnippetClause{
 		codegen.Clause(e.ConstUnknown()).Do(
@@ -263,6 +277,10 @@ func (e *Enum) WriteTypeNameAndConstValues(file *codegen.File) {
 		tpe,
 	}
 	holder := "?"
+
+	sort.Slice(e.Options, func(i, j int) bool {
+		return e.Options[i].ConstValue < e.Options[j].ConstValue
+	})
 
 	for i, o := range e.Options {
 		if i > 0 {
