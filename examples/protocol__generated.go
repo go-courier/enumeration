@@ -4,7 +4,6 @@ import (
 	bytes "bytes"
 	database_sql_driver "database/sql/driver"
 	errors "errors"
-
 	github_com_go_courier_enumeration "github.com/go-courier/enumeration"
 )
 
@@ -70,12 +69,16 @@ func (v Protocol) Label() string {
 	return "UNKNOWN"
 }
 
+func (v Protocol) Int() int {
+	return int(v)
+}
+
 func (Protocol) TypeName() string {
 	return "Protocol"
 }
 
 func (Protocol) ConstValues() []github_com_go_courier_enumeration.Enum {
-	return []github_com_go_courier_enumeration.Enum{PROTOCOL__TCP, PROTOCOL__HTTPS, PROTOCOL__HTTP}
+	return []github_com_go_courier_enumeration.Enum{PROTOCOL__HTTP, PROTOCOL__HTTPS, PROTOCOL__TCP}
 }
 
 func (v Protocol) MarshalText() ([]byte, error) {

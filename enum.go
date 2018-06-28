@@ -8,20 +8,19 @@ import (
 type Enum interface {
 	TypeName() string
 	ConstValues() []Enum
+	Int() int
 	String() string
 	Label() string
 }
 
+// sql value of enum maybe have offset from value of enum in go
 type EnumDriverValueOffset interface {
 	Offset() int
 }
 
-func NewEnumOption(constValue int, value string, label string) *EnumOption {
-	return &EnumOption{
-		ConstValue: constValue,
-		Value:      value,
-		Label:      label,
-	}
+type EnumInfo struct {
+	TypeName string       `json:"typeName"`
+	Options  []EnumOption `json:"options"`
 }
 
 type EnumOption struct {
@@ -40,6 +39,29 @@ func (m EnumMap) Register(enum Enum) {
 		panic(fmt.Errorf("`%s` is already defined, please make enum name unqiue in one service", typeName))
 	}
 	m[typeName] = enum
+}
+
+func (m EnumMap) List() []EnumInfo {
+	infoList := make([]EnumInfo, 0)
+
+	for typeName, e := range m {
+		options := make([]EnumOption, 0)
+
+		for _, v := range e.ConstValues() {
+			options = append(options, EnumOption{
+				ConstValue: v.Int(),
+				Value:      v.String(),
+				Label:      v.Label(),
+			})
+		}
+
+		infoList = append(infoList, EnumInfo{
+			TypeName: typeName,
+			Options:  options,
+		})
+	}
+
+	return infoList
 }
 
 func ScanEnum(src interface{}, offset int) (int, error) {

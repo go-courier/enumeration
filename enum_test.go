@@ -6,7 +6,37 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-courier/enumeration"
+	"github.com/go-courier/enumeration/examples"
 )
+
+func TestEnumMap(t *testing.T) {
+	assert.Equal(t, examples.PROTOCOL__HTTP.String(), "HTTP")
+
+	list := enumeration.DefaultEnumMap.List()
+
+	assert.Equal(t, list, []enumeration.EnumInfo{
+		{
+			TypeName: "Protocol",
+			Options: []enumeration.EnumOption{
+				{
+					Value:      "HTTP",
+					Label:      "http",
+					ConstValue: examples.PROTOCOL__HTTP.Int(),
+				},
+				{
+					Value:      "HTTPS",
+					Label:      "https",
+					ConstValue: examples.PROTOCOL__HTTPS.Int(),
+				},
+				{
+					Value:      "TCP",
+					Label:      "TCP",
+					ConstValue: examples.PROTOCOL__TCP.Int(),
+				},
+			},
+		},
+	})
+}
 
 func TestScanEnum(t *testing.T) {
 	cases := []struct {
