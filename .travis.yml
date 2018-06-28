@@ -8,7 +8,7 @@ before_install:
   - go get -u golang.org/x/vgo
 
 script:
-  - ./go.test.sh
+  - vgo test -race -coverprofile=profile.out -covermode=atomic ./...
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
