@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-courier/enumeration"
-	"github.com/go-courier/enumeration/examples"
+	"github.com/go-courier/enumeration/__examples__"
 )
 
 func TestEnumMap(t *testing.T) {

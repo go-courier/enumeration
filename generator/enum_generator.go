@@ -299,9 +299,9 @@ func (e *Enum) TextMarshalerAndTextUnmarshaler(file *codegen.File) {
 			MethodOf(codegen.Var(codegen.Type(e.Name()), "v")).
 			Named("MarshalText").
 			Return(
-			codegen.Var(codegen.Slice(codegen.Byte)),
-			codegen.Var(codegen.Error),
-		).Do(
+				codegen.Var(codegen.Slice(codegen.Byte)),
+				codegen.Var(codegen.Error),
+			).Do(
 			file.Expr(`str := v.String()`),
 			codegen.If(file.Expr(`str == ?`, "UNKNOWN")).Do(
 				codegen.Return(codegen.Nil, e.VarInvalidError()),
@@ -333,9 +333,9 @@ if o, ok := (interface{})(v).(?); ok {
 			MethodOf(codegen.Var(codegen.Type(e.Name()), "v")).
 			Named("Value").
 			Return(
-			codegen.Var(codegen.Type(file.Use("database/sql/driver", "Value"))),
-			codegen.Var(codegen.Error),
-		).Do(
+				codegen.Var(codegen.Type(file.Use("database/sql/driver", "Value"))),
+				codegen.Var(codegen.Error),
+			).Do(
 			offsetExprs,
 			codegen.Return(file.Expr("int(v) + offset"), codegen.Nil),
 		),

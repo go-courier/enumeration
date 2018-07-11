@@ -10,7 +10,7 @@ import (
 
 func TestGenerator(t *testing.T) {
 	cwd, _ := os.Getwd()
-	p, pkgInfo, _ := loaderx.LoadWithTests(filepath.Join(cwd, "../examples"))
+	p, pkgInfo, _ := loaderx.LoadWithTests(filepath.Join(cwd, "../__examples__"))
 
 	g := NewEnumGenerator(p, pkgInfo)
 
