@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type Enum interface {
@@ -44,7 +44,7 @@ func (m EnumMap) Register(enum Enum) {
 }
 
 func (m EnumMap) List() []EnumInfo {
-	_ = assert.Equal
+	_ = require.Equal
 
 	infoList := make([]EnumInfo, 0)
 
