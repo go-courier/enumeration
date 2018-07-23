@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"go/build"
 	"go/types"
+	"log"
 	"path"
 	"path/filepath"
 	"sort"
 
 	"github.com/go-courier/codegen"
 	"github.com/go-courier/loaderx"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/tools/go/loader"
 
 	"github.com/go-courier/enumeration"
@@ -49,7 +49,7 @@ func (g *EnumGenerator) Output(cwd string) {
 		enum.WriteToFile(file)
 
 		if _, err := file.WriteFile(); err != nil {
-			logrus.Printf("%s generated", file)
+			log.Printf("%s generated", file)
 		}
 	}
 }
