@@ -3,7 +3,6 @@ package generator
 import (
 	"fmt"
 	"go/build"
-	"go/types"
 	"log"
 	"path"
 	"path/filepath"
@@ -14,20 +13,21 @@ import (
 	"golang.org/x/tools/go/loader"
 
 	"github.com/go-courier/enumeration"
+	"go/types"
 )
 
 func NewEnumGenerator(program *loader.Program, rootPkgInfo *loader.PackageInfo) *EnumGenerator {
 	return &EnumGenerator{
 		pkgInfo: rootPkgInfo,
 		scanner: NewEnumScanner(program),
-		enums:   map[string]*Enum{},
+		enums:   map[*types.TypeName]*Enum{},
 	}
 }
 
 type EnumGenerator struct {
 	pkgInfo *loader.PackageInfo
 	scanner *EnumScanner
-	enums   map[string]*Enum
+	enums   map[*types.TypeName]*Enum
 }
 
 func (g *EnumGenerator) Scan(names ...string) {
@@ -35,17 +35,17 @@ func (g *EnumGenerator) Scan(names ...string) {
 
 	for _, name := range names {
 		typeName := pkgInfo.TypeName(name)
-		g.enums[name] = NewEnum(typeName, g.scanner.Enum(typeName))
+		g.enums[typeName] = NewEnum(typeName.Name(), g.scanner.Enum(typeName))
 	}
 }
 
 func (g *EnumGenerator) Output(cwd string) {
-	for _, enum := range g.enums {
-		p, _ := build.Import(enum.TypeName.Pkg().Path(), "", build.FindOnly)
+	for typeName, enum := range g.enums {
+		p, _ := build.Import(typeName.Pkg().Path(), "", build.FindOnly)
 		dir, _ := filepath.Rel(cwd, p.Dir)
-		filename := codegen.GeneratedFileSuffix(path.Join(dir, codegen.LowerSnakeCase(enum.Name())+".go"))
+		filename := codegen.GeneratedFileSuffix(path.Join(dir, codegen.LowerSnakeCase(enum.Name)+".go"))
 
-		file := codegen.NewFile(enum.TypeName.Pkg().Name(), filename)
+		file := codegen.NewFile(typeName.Pkg().Name(), filename)
 		enum.WriteToFile(file)
 
 		if _, err := file.WriteFile(); err != nil {
@@ -54,32 +54,28 @@ func (g *EnumGenerator) Output(cwd string) {
 	}
 }
 
-func NewEnum(typeName *types.TypeName, options []enumeration.EnumOption) *Enum {
+func NewEnum(name string, options []enumeration.EnumOption) *Enum {
 	return &Enum{
-		TypeName: typeName,
-		Options:  options,
+		Name:    name,
+		Options: options,
 	}
 }
 
 type Enum struct {
-	TypeName *types.TypeName
-	Options  []enumeration.EnumOption
-}
-
-func (e *Enum) Name() string {
-	return e.TypeName.Name()
+	Name    string
+	Options []enumeration.EnumOption
 }
 
 func (e *Enum) ConstUnknown() codegen.Snippet {
-	return codegen.Id(codegen.UpperSnakeCase(e.Name()) + "_UNKNOWN")
+	return codegen.Id(codegen.UpperSnakeCase(e.Name) + "_UNKNOWN")
 }
 
 func (e *Enum) ConstValue(value string) codegen.Snippet {
-	return codegen.Id(codegen.UpperSnakeCase(e.Name()) + "__" + value)
+	return codegen.Id(codegen.UpperSnakeCase(e.Name) + "__" + value)
 }
 
 func (e *Enum) VarInvalidError() codegen.Snippet {
-	return codegen.Id("Invalid" + e.Name())
+	return codegen.Id("Invalid" + e.Name)
 }
 
 func (e *Enum) WriteToFile(file *codegen.File) {
@@ -112,7 +108,7 @@ func (e *Enum) WriteErrors(file *codegen.File) {
 			`var ? = ?("invalid ? type")`,
 			e.VarInvalidError(),
 			codegen.Id(file.Use("errors", "New")),
-			codegen.Id(e.Name()),
+			codegen.Id(e.Name),
 		),
 	)
 }
@@ -138,8 +134,8 @@ func (e *Enum) WriteStringParser(file *codegen.File) {
 
 	file.WriteBlock(
 		codegen.Func(codegen.Var(codegen.String, "s")).
-			Named(fmt.Sprintf("Parse%sFromString", e.Name())).
-			Return(codegen.Var(codegen.Type(e.Name())), codegen.Var(codegen.Error)).Do(
+			Named(fmt.Sprintf("Parse%sFromString", e.Name)).
+			Return(codegen.Var(codegen.Type(e.Name)), codegen.Var(codegen.Error)).Do(
 			codegen.Switch(codegen.Id("s")).When(
 				clauses...,
 			),
@@ -170,8 +166,8 @@ func (e *Enum) WriteLabelStringParser(file *codegen.File) {
 
 	file.WriteBlock(
 		codegen.Func(codegen.Var(codegen.String, "s")).
-			Named(fmt.Sprintf("Parse%sFromLabelString", e.Name())).
-			Return(codegen.Var(codegen.Type(e.Name())), codegen.Var(codegen.Error)).Do(
+			Named(fmt.Sprintf("Parse%sFromLabelString", e.Name)).
+			Return(codegen.Var(codegen.Type(e.Name)), codegen.Var(codegen.Error)).Do(
 			codegen.Switch(codegen.Id("s")).When(
 				clauses...,
 			),
@@ -199,7 +195,7 @@ func (e *Enum) WriteStringer(file *codegen.File) {
 
 	file.WriteBlock(
 		codegen.Func().
-			MethodOf(codegen.Var(codegen.Type(e.Name()), "v")).
+			MethodOf(codegen.Var(codegen.Type(e.Name), "v")).
 			Named("String").
 			Return(codegen.Var(codegen.String)).Do(
 			codegen.Switch(codegen.Id("v")).When(
@@ -214,7 +210,7 @@ func (e *Enum) WriteStringer(file *codegen.File) {
 func (e *Enum) WriteInt(file *codegen.File) {
 	file.WriteBlock(
 		codegen.Func().
-			MethodOf(codegen.Var(codegen.Type(e.Name()), "v")).
+			MethodOf(codegen.Var(codegen.Type(e.Name), "v")).
 			Named("Int").
 			Return(codegen.Var(codegen.Int)).Do(
 			codegen.Return(file.Expr("int(v)")),
@@ -242,7 +238,7 @@ func (e *Enum) WriteLabeler(file *codegen.File) {
 
 	file.WriteBlock(
 		codegen.Func().
-			MethodOf(codegen.Var(codegen.Type(e.Name()), "v")).
+			MethodOf(codegen.Var(codegen.Type(e.Name), "v")).
 			Named("Label").
 			Return(codegen.Var(codegen.String)).Do(
 			codegen.Switch(codegen.Id("v")).When(
@@ -257,10 +253,10 @@ func (e *Enum) WriteLabeler(file *codegen.File) {
 func (e *Enum) WriteTypeNameAndConstValues(file *codegen.File) {
 	file.WriteBlock(
 		codegen.Func().
-			MethodOf(codegen.Var(codegen.Type(e.Name()))).
+			MethodOf(codegen.Var(codegen.Type(e.Name))).
 			Named("TypeName").
 			Return(codegen.Var(codegen.String)).Do(
-			codegen.Return(file.Val(e.Name())),
+			codegen.Return(file.Val(e.Name)),
 		),
 	)
 
@@ -284,7 +280,7 @@ func (e *Enum) WriteTypeNameAndConstValues(file *codegen.File) {
 
 	file.WriteBlock(
 		codegen.Func().
-			MethodOf(codegen.Var(codegen.Type(e.Name()))).
+			MethodOf(codegen.Var(codegen.Type(e.Name))).
 			Named("ConstValues").
 			Return(codegen.Var(tpe)).Do(
 			codegen.Return(file.Expr(`?{`+holder+`}`, list...)),
@@ -296,12 +292,12 @@ func (e *Enum) WriteTypeNameAndConstValues(file *codegen.File) {
 func (e *Enum) TextMarshalerAndTextUnmarshaler(file *codegen.File) {
 	file.WriteBlock(
 		codegen.Func().
-			MethodOf(codegen.Var(codegen.Type(e.Name()), "v")).
+			MethodOf(codegen.Var(codegen.Type(e.Name), "v")).
 			Named("MarshalText").
 			Return(
-				codegen.Var(codegen.Slice(codegen.Byte)),
-				codegen.Var(codegen.Error),
-			).Do(
+			codegen.Var(codegen.Slice(codegen.Byte)),
+			codegen.Var(codegen.Error),
+		).Do(
 			file.Expr(`str := v.String()`),
 			codegen.If(file.Expr(`str == ?`, "UNKNOWN")).Do(
 				codegen.Return(codegen.Nil, e.VarInvalidError()),
@@ -312,10 +308,10 @@ func (e *Enum) TextMarshalerAndTextUnmarshaler(file *codegen.File) {
 
 	file.WriteBlock(
 		codegen.Func(codegen.Var(codegen.Slice(codegen.Byte), "data")).
-			MethodOf(codegen.Var(codegen.Star(codegen.Type(e.Name())), "v")).
+			MethodOf(codegen.Var(codegen.Star(codegen.Type(e.Name)), "v")).
 			Named("UnmarshalText").
 			Return(codegen.Var(codegen.Error, "err")).Do(
-			file.Expr("*v, err = Parse?FromString(string(?(data)))", codegen.Id(e.Name()), codegen.Id(file.Use("bytes", "ToUpper"))),
+			file.Expr("*v, err = Parse?FromString(string(?(data)))", codegen.Id(e.Name), codegen.Id(file.Use("bytes", "ToUpper"))),
 			codegen.Return(),
 		),
 	)
@@ -330,12 +326,12 @@ if o, ok := (interface{})(v).(?); ok {
 
 	file.WriteBlock(
 		codegen.Func().
-			MethodOf(codegen.Var(codegen.Type(e.Name()), "v")).
+			MethodOf(codegen.Var(codegen.Type(e.Name), "v")).
 			Named("Value").
 			Return(
-				codegen.Var(codegen.Type(file.Use("database/sql/driver", "Value"))),
-				codegen.Var(codegen.Error),
-			).Do(
+			codegen.Var(codegen.Type(file.Use("database/sql/driver", "Value"))),
+			codegen.Var(codegen.Error),
+		).Do(
 			offsetExprs,
 			codegen.Return(file.Expr("int(v) + offset"), codegen.Nil),
 		),
@@ -343,7 +339,7 @@ if o, ok := (interface{})(v).(?); ok {
 
 	file.WriteBlock(
 		codegen.Func(codegen.Var(codegen.Interface(), "src")).
-			MethodOf(codegen.Var(codegen.Star(codegen.Type(e.Name())), "v")).
+			MethodOf(codegen.Var(codegen.Star(codegen.Type(e.Name)), "v")).
 			Named("Scan").
 			Return(codegen.Var(codegen.Error)).Do(
 			offsetExprs,
@@ -357,7 +353,7 @@ if err != nil {
 return nil
 `,
 				codegen.Id(file.Use("github.com/go-courier/enumeration", "ScanEnum")),
-				codegen.Id(e.Name()),
+				codegen.Id(e.Name),
 			),
 		),
 	)
