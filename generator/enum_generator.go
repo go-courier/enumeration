@@ -2,7 +2,7 @@ package generator
 
 import (
 	"fmt"
-	"go/build"
+	"go/types"
 	"log"
 	"path"
 	"path/filepath"
@@ -11,9 +11,9 @@ import (
 	"github.com/go-courier/codegen"
 	"github.com/go-courier/loaderx"
 	"golang.org/x/tools/go/loader"
+	"golang.org/x/tools/go/packages"
 
 	"github.com/go-courier/enumeration"
-	"go/types"
 )
 
 func NewEnumGenerator(program *loader.Program, rootPkgInfo *loader.PackageInfo) *EnumGenerator {
@@ -39,10 +39,22 @@ func (g *EnumGenerator) Scan(names ...string) {
 	}
 }
 
+func getPkgDir(importPath string) string {
+	pkgs, err := packages.Load(&packages.Config{
+		Mode: packages.LoadFiles,
+	}, importPath)
+	if err != nil {
+		panic(err)
+	}
+	if len(pkgs) == 0 {
+		panic(fmt.Errorf("package `%s` not found", importPath))
+	}
+	return filepath.Dir(pkgs[0].GoFiles[0])
+}
+
 func (g *EnumGenerator) Output(cwd string) {
 	for typeName, enum := range g.enums {
-		p, _ := build.Import(typeName.Pkg().Path(), "", build.FindOnly)
-		dir, _ := filepath.Rel(cwd, p.Dir)
+		dir, _ := filepath.Rel(cwd, getPkgDir(typeName.Pkg().Path()))
 		filename := codegen.GeneratedFileSuffix(path.Join(dir, codegen.LowerSnakeCase(enum.Name)+".go"))
 
 		file := codegen.NewFile(typeName.Pkg().Name(), filename)
@@ -295,9 +307,9 @@ func (e *Enum) TextMarshalerAndTextUnmarshaler(file *codegen.File) {
 			MethodOf(codegen.Var(codegen.Type(e.Name), "v")).
 			Named("MarshalText").
 			Return(
-			codegen.Var(codegen.Slice(codegen.Byte)),
-			codegen.Var(codegen.Error),
-		).Do(
+				codegen.Var(codegen.Slice(codegen.Byte)),
+				codegen.Var(codegen.Error),
+			).Do(
 			file.Expr(`str := v.String()`),
 			codegen.If(file.Expr(`str == ?`, "UNKNOWN")).Do(
 				codegen.Return(codegen.Nil, e.VarInvalidError()),
@@ -329,9 +341,9 @@ if o, ok := (interface{})(v).(?); ok {
 			MethodOf(codegen.Var(codegen.Type(e.Name), "v")).
 			Named("Value").
 			Return(
-			codegen.Var(codegen.Type(file.Use("database/sql/driver", "Value"))),
-			codegen.Var(codegen.Error),
-		).Do(
+				codegen.Var(codegen.Type(file.Use("database/sql/driver", "Value"))),
+				codegen.Var(codegen.Error),
+			).Do(
 			offsetExprs,
 			codegen.Return(file.Expr("int(v) + offset"), codegen.Nil),
 		),
