@@ -9,19 +9,19 @@ import (
 	"strings"
 
 	"github.com/go-courier/codegen"
-	"golang.org/x/tools/go/loader"
 
 	"github.com/go-courier/enumeration"
+	"github.com/go-courier/packagesx"
 )
 
-func NewEnumScanner(program *loader.Program) *EnumScanner {
+func NewEnumScanner(pkg *packagesx.Package) *EnumScanner {
 	return &EnumScanner{
-		program: program,
+		pkg: pkg,
 	}
 }
 
 type EnumScanner struct {
-	program *loader.Program
+	pkg     *packagesx.Package
 	EnumSet map[*types.TypeName][]enumeration.EnumOption
 }
 
@@ -45,14 +45,14 @@ func (scanner *EnumScanner) Enum(typeName *types.TypeName) []enumeration.EnumOpt
 		panic(fmt.Errorf("enumeration type underlying must be an int or uint, but got %s", typeName.String()))
 	}
 
-	pkgInfo := scanner.program.Package(typeName.Pkg().Path())
+	pkgInfo := scanner.pkg.Pkg(typeName.Pkg().Path())
 	if pkgInfo == nil {
 		return nil
 	}
 
 	typeNameString := typeName.Name()
 
-	for ident, def := range pkgInfo.Defs {
+	for ident, def := range pkgInfo.TypesInfo.Defs {
 		typeConst, ok := def.(*types.Const)
 		if !ok {
 			continue

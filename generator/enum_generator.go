@@ -9,32 +9,29 @@ import (
 	"sort"
 
 	"github.com/go-courier/codegen"
-	"github.com/go-courier/loaderx"
-	"golang.org/x/tools/go/loader"
+	"github.com/go-courier/packagesx"
 	"golang.org/x/tools/go/packages"
 
 	"github.com/go-courier/enumeration"
 )
 
-func NewEnumGenerator(program *loader.Program, rootPkgInfo *loader.PackageInfo) *EnumGenerator {
+func NewEnumGenerator(pkg *packagesx.Package) *EnumGenerator {
 	return &EnumGenerator{
-		pkgInfo: rootPkgInfo,
-		scanner: NewEnumScanner(program),
+		pkg:     pkg,
+		scanner: NewEnumScanner(pkg),
 		enums:   map[*types.TypeName]*Enum{},
 	}
 }
 
 type EnumGenerator struct {
-	pkgInfo *loader.PackageInfo
+	pkg     *packagesx.Package
 	scanner *EnumScanner
 	enums   map[*types.TypeName]*Enum
 }
 
 func (g *EnumGenerator) Scan(names ...string) {
-	pkgInfo := loaderx.NewPackageInfo(g.pkgInfo)
-
 	for _, name := range names {
-		typeName := pkgInfo.TypeName(name)
+		typeName := g.pkg.TypeName(name)
 		g.enums[typeName] = NewEnum(typeName.Name(), g.scanner.Enum(typeName))
 	}
 }
