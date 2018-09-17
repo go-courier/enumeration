@@ -342,7 +342,7 @@ if o, ok := (interface{})(v).(?); ok {
 				codegen.Var(codegen.Error),
 			).Do(
 			offsetExprs,
-			codegen.Return(file.Expr("int(v) + offset"), codegen.Nil),
+			codegen.Return(file.Expr("int64(v) + int64(offset)"), codegen.Nil),
 		),
 	)
 

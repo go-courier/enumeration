@@ -1,9 +1,9 @@
 package examples
 
 import (
-	"bytes"
+	bytes "bytes"
 	database_sql_driver "database/sql/driver"
-	"errors"
+	errors "errors"
 
 	github_com_go_courier_enumeration "github.com/go-courier/enumeration"
 )
@@ -100,7 +100,7 @@ func (v Protocol) Value() (database_sql_driver.Value, error) {
 	if o, ok := (interface{})(v).(github_com_go_courier_enumeration.EnumDriverValueOffset); ok {
 		offset = o.Offset()
 	}
-	return int(v) + offset, nil
+	return int64(v) + int64(offset), nil
 }
 
 func (v *Protocol) Scan(src interface{}) error {
