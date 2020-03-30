@@ -3,18 +3,18 @@ package enumeration_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/go-courier/enumeration/__examples__"
+	. "github.com/onsi/gomega"
 
 	"github.com/go-courier/enumeration"
-	"github.com/go-courier/enumeration/__examples__"
 )
 
 func TestEnumMap(t *testing.T) {
-	require.Equal(t, examples.PROTOCOL__HTTP.String(), "HTTP")
+	NewWithT(t).Expect(examples.PROTOCOL__HTTP.String()).To(Equal("HTTP"))
 
 	list := enumeration.DefaultEnumMap.List()
 
-	require.Equal(t, list, []enumeration.EnumInfo{
+	NewWithT(t).Expect(list).To(Equal([]enumeration.EnumInfo{
 		{
 			TypeName: "Protocol",
 			Options: []enumeration.EnumOption{
@@ -35,7 +35,7 @@ func TestEnumMap(t *testing.T) {
 				},
 			},
 		},
-	})
+	}))
 }
 
 func TestScanEnum(t *testing.T) {
@@ -82,8 +82,8 @@ func TestScanEnum(t *testing.T) {
 	for _, c := range cases {
 		for i, v := range c.values {
 			n, err := enumeration.ScanEnum(v, c.offset)
-			require.NoError(t, err)
-			require.Equal(t, c.expect[i], n)
+			NewWithT(t).Expect(err).To(BeNil())
+			NewWithT(t).Expect(n).To(Equal(c.expect[i]))
 		}
 	}
 }

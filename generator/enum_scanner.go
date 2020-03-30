@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/go-courier/codegen"
+	"github.com/go-courier/packagesx"
 
 	"github.com/go-courier/enumeration"
-	"github.com/go-courier/packagesx"
 )
 
 func NewEnumScanner(pkg *packagesx.Package) *EnumScanner {
@@ -72,6 +72,10 @@ func (scanner *EnumScanner) Enum(typeName *types.TypeName) []enumeration.EnumOpt
 		if strings.HasPrefix(name, codegen.UpperSnakeCase(typeNameString)) {
 			var values = strings.SplitN(name, "__", 2)
 			if len(values) == 2 {
+				firstChar := values[1][0]
+				if '0' <= firstChar && firstChar <= '9' {
+					panic(fmt.Errorf("not support enum key starts with number, please fix `%s`", name))
+				}
 				intVal, _ := strconv.ParseInt(val.String(), 10, 64)
 				scanner.addEnum(typeName, int(intVal), values[1], label)
 			}
