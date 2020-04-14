@@ -1,7 +1,6 @@
 package enumeration
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/stretchr/testify/require"
@@ -37,10 +36,10 @@ type EnumMap map[string]Enum
 
 func (m EnumMap) Register(enum Enum) {
 	typeName := enum.TypeName()
-	if _, ok := m[typeName]; ok {
-		panic(fmt.Errorf("`%s` is already defined, please make enum name unqiue in one service", typeName))
+	if _, ok := m[typeName]; !ok {
+		//panic(fmt.Errorf("`%s` is already defined, please make enum name unqiue in one service", typeName))
+		m[typeName] = enum
 	}
-	m[typeName] = enum
 }
 
 func (m EnumMap) List() []EnumInfo {
