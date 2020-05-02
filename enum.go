@@ -2,7 +2,9 @@ package enumeration
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/stretchr/testify/require"
 )
@@ -36,11 +38,25 @@ var DefaultEnumMap = EnumMap{}
 type EnumMap map[string]Enum
 
 func (m EnumMap) Register(enum Enum) {
-	typeName := enum.TypeName()
-	if _, ok := m[typeName]; ok {
-		panic(fmt.Errorf("`%s` is already defined, please make enum name unqiue in one service", typeName))
+	registerEnumName := ""
+	pc := make([]uintptr, 1) // at least 1 entry needed
+	n := runtime.Callers(2, pc)
+	for i := 0; i < n; i++ {
+		f := runtime.FuncForPC(pc[i])
+		callPath := strings.Split(f.Name(), `.init`)[0]
+		splitStrings := strings.Split(callPath, `/`)
+		orgName := splitStrings[1]
+		repoName := splitStrings[2]
+		packageName := splitStrings[len(splitStrings)-1]
+		registerEnumName = fmt.Sprintf("%s|%s|%s|%s", orgName, repoName, packageName, enum.TypeName())
 	}
-	m[typeName] = enum
+	if registerEnumName == ""{
+		registerEnumName = enum.TypeName()
+	}
+	if _, ok := m[registerEnumName]; ok {
+		panic(fmt.Errorf("`%s` is already defined, please make enum name unqiue in one service", registerEnumName))
+	}
+	m[registerEnumName] = enum
 }
 
 func (m EnumMap) List() []EnumInfo {
