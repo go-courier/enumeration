@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/go-courier/codegen"
 	"github.com/go-courier/packagesx"
@@ -32,7 +33,7 @@ type EnumGenerator struct {
 func (g *EnumGenerator) Scan(names ...string) {
 	for _, name := range names {
 		typeName := g.pkg.TypeName(name)
-		g.enums[typeName] = NewEnum(typeName.Pkg().Path(), typeName.Name(), g.scanner.Enum(typeName))
+		g.enums[typeName] = NewEnum(typeName.Pkg().Path()+"."+typeName.Name(), g.scanner.Enum(typeName))
 	}
 }
 
@@ -63,7 +64,18 @@ func (g *EnumGenerator) Output(cwd string) {
 	}
 }
 
-func NewEnum(pkgPath, name string, options []enumeration.EnumOption) *Enum {
+func NewEnum(pkgTypeOrName string, options []enumeration.EnumOption) *Enum {
+	parts := strings.Split(pkgTypeOrName, ".")
+	pkgPath, name := "", ""
+
+	switch len(parts) {
+	case 1:
+		name = parts[0]
+	default:
+		pkgPath = strings.Join(parts[0:len(parts)-1], ".")
+		name = parts[len(parts)-1]
+	}
+
 	return &Enum{
 		PkgPath: pkgPath,
 		Name:    name,
