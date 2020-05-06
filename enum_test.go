@@ -16,7 +16,7 @@ func TestEnumMap(t *testing.T) {
 
 	NewWithT(t).Expect(list).To(Equal([]enumeration.EnumInfo{
 		{
-			TypeName: "Protocol",
+			TypeName: "github.com/go-courier/enumeration/__examples__.Protocol",
 			Options: []enumeration.EnumOption{
 				{
 					Value:      "HTTP",

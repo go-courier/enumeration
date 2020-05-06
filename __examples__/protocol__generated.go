@@ -75,7 +75,7 @@ func (v Protocol) Int() int {
 }
 
 func (Protocol) TypeName() string {
-	return "Protocol"
+	return "github.com/go-courier/enumeration/__examples__.Protocol"
 }
 
 func (Protocol) ConstValues() []github_com_go_courier_enumeration.Enum {

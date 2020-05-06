@@ -32,7 +32,7 @@ type EnumGenerator struct {
 func (g *EnumGenerator) Scan(names ...string) {
 	for _, name := range names {
 		typeName := g.pkg.TypeName(name)
-		g.enums[typeName] = NewEnum(typeName.Name(), g.scanner.Enum(typeName))
+		g.enums[typeName] = NewEnum(typeName.Pkg().Path(), typeName.Name(), g.scanner.Enum(typeName))
 	}
 }
 
@@ -63,14 +63,16 @@ func (g *EnumGenerator) Output(cwd string) {
 	}
 }
 
-func NewEnum(name string, options []enumeration.EnumOption) *Enum {
+func NewEnum(pkgPath, name string, options []enumeration.EnumOption) *Enum {
 	return &Enum{
+		PkgPath: pkgPath,
 		Name:    name,
 		Options: options,
 	}
 }
 
 type Enum struct {
+	PkgPath string
 	Name    string
 	Options []enumeration.EnumOption
 }
@@ -265,7 +267,7 @@ func (e *Enum) WriteTypeNameAndConstValues(file *codegen.File) {
 			MethodOf(codegen.Var(codegen.Type(e.Name))).
 			Named("TypeName").
 			Return(codegen.Var(codegen.String)).Do(
-			codegen.Return(file.Val(e.Name)),
+			codegen.Return(file.Val(e.PkgPath + "." + e.Name)),
 		),
 	)
 

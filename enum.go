@@ -3,8 +3,6 @@ package enumeration
 import (
 	"fmt"
 	"strconv"
-
-	"github.com/stretchr/testify/require"
 )
 
 type Enum interface {
@@ -44,8 +42,6 @@ func (m EnumMap) Register(enum Enum) {
 }
 
 func (m EnumMap) List() []EnumInfo {
-	_ = require.Equal
-
 	infoList := make([]EnumInfo, 0)
 
 	for typeName, e := range m {
