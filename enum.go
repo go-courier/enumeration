@@ -2,7 +2,9 @@ package enumeration
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/stretchr/testify/require"
 )
@@ -37,6 +39,21 @@ type EnumMap map[string]Enum
 
 func (m EnumMap) Register(enum Enum) {
 	typeName := enum.TypeName()
+	pc := make([]uintptr, 1)
+	n := runtime.Callers(2, pc)
+	for i := 0; i < n; i++ {
+		fullCallPath := runtime.FuncForPC(pc[i]).Name()
+		if strings.Contains(fullCallPath, ".init") {
+			fullCallPath = strings.Split(fullCallPath, `.init`)[0]
+		}
+		splitStrings := strings.Split(fullCallPath, `/`)
+		if len(splitStrings) >= 3{
+			orgName := splitStrings[1]
+			repoName := splitStrings[2]
+			packageName := splitStrings[len(splitStrings)-1]
+			typeName = fmt.Sprintf("%s|%s|%s|%s", orgName, repoName, packageName, enum.TypeName())
+		}
+	}
 	if _, ok := m[typeName]; ok {
 		panic(fmt.Errorf("`%s` is already defined, please make enum name unqiue in one service", typeName))
 	}
