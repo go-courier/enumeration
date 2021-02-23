@@ -12,8 +12,8 @@ func TestGenerator(t *testing.T) {
 	cwd, _ := os.Getwd()
 	p, _ := packagesx.Load(filepath.Join(cwd, "../__examples__"))
 
-	g := NewEnumGenerator(p)
+	g := NewGenerator(p)
 
-	g.Scan("Protocol")
+	g.Scan("Protocol", "PullPolicy")
 	g.Output(cwd)
 }

@@ -9,37 +9,43 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-courier/enumeration/scanner"
+
 	"github.com/go-courier/codegen"
 	"github.com/go-courier/packagesx"
 	"golang.org/x/tools/go/packages"
-
-	"github.com/go-courier/enumeration"
 )
 
-func NewEnumGenerator(pkg *packagesx.Package) *EnumGenerator {
-	return &EnumGenerator{
+func NewGenerator(pkg *packagesx.Package) *Generator {
+	return &Generator{
 		pkg:     pkg,
-		scanner: NewEnumScanner(pkg),
+		scanner: scanner.NewScanner(pkg),
 		enums:   map[*types.TypeName]*Enum{},
 	}
 }
 
-type EnumGenerator struct {
+type Generator struct {
 	pkg     *packagesx.Package
-	scanner *EnumScanner
+	scanner *scanner.Scanner
 	enums   map[*types.TypeName]*Enum
 }
 
-func (g *EnumGenerator) Scan(names ...string) {
+func (g *Generator) Scan(names ...string) {
 	for _, name := range names {
 		typeName := g.pkg.TypeName(name)
-		g.enums[typeName] = NewEnum(typeName.Pkg().Path()+"."+typeName.Name(), g.scanner.Enum(typeName))
+
+		if options, ok := g.scanner.Options(typeName); ok {
+			// only generate int stringer enum
+			if options[0].Int != nil && options[0].Str != nil {
+				g.enums[typeName] = NewEnum(typeName.Pkg().Path()+"."+typeName.Name(), options)
+			}
+		}
 	}
 }
 
 func getPkgDir(importPath string) string {
 	pkgs, err := packages.Load(&packages.Config{
-		Mode: packages.LoadFiles,
+		Mode: packages.NeedName | packages.NeedFiles,
 	}, importPath)
 	if err != nil {
 		panic(err)
@@ -50,7 +56,7 @@ func getPkgDir(importPath string) string {
 	return filepath.Dir(pkgs[0].GoFiles[0])
 }
 
-func (g *EnumGenerator) Output(cwd string) {
+func (g *Generator) Output(cwd string) {
 	for typeName, enum := range g.enums {
 		dir, _ := filepath.Rel(cwd, getPkgDir(typeName.Pkg().Path()))
 		filename := codegen.GeneratedFileSuffix(path.Join(dir, codegen.LowerSnakeCase(enum.Name)+".go"))
@@ -64,7 +70,7 @@ func (g *EnumGenerator) Output(cwd string) {
 	}
 }
 
-func NewEnum(pkgTypeOrName string, options []enumeration.EnumOption) *Enum {
+func NewEnum(pkgTypeOrName string, options scanner.Options) *Enum {
 	parts := strings.Split(pkgTypeOrName, ".")
 	pkgPath, name := "", ""
 
@@ -86,14 +92,14 @@ func NewEnum(pkgTypeOrName string, options []enumeration.EnumOption) *Enum {
 type Enum struct {
 	PkgPath string
 	Name    string
-	Options []enumeration.EnumOption
+	Options scanner.Options
 }
 
 func (e *Enum) ConstUnknown() codegen.Snippet {
 	return codegen.Id(codegen.UpperSnakeCase(e.Name) + "_UNKNOWN")
 }
 
-func (e *Enum) ConstValue(value string) codegen.Snippet {
+func (e *Enum) ConstName(value string) codegen.Snippet {
 	return codegen.Id(codegen.UpperSnakeCase(e.Name) + "__" + value)
 }
 
@@ -102,7 +108,6 @@ func (e *Enum) VarInvalidError() codegen.Snippet {
 }
 
 func (e *Enum) WriteToFile(file *codegen.File) {
-	e.WriteInit(file)
 	e.WriteErrors(file)
 	e.WriteLabelStringParser(file)
 	e.WriteStringer(file)
@@ -112,17 +117,6 @@ func (e *Enum) WriteToFile(file *codegen.File) {
 	e.WriteTypeNameAndConstValues(file)
 	e.TextMarshalerAndTextUnmarshaler(file)
 	e.TextScanAndValuer(file)
-}
-
-func (e *Enum) WriteInit(file *codegen.File) {
-	file.WriteBlock(
-		codegen.Func().Named("init").Do(
-			codegen.Sel(
-				codegen.Id(file.Use("github.com/go-courier/enumeration", "DefaultEnumMap")),
-				codegen.Call("Register", e.ConstUnknown()),
-			),
-		),
-	)
 }
 
 func (e *Enum) WriteErrors(file *codegen.File) {
@@ -147,9 +141,9 @@ func (e *Enum) WriteStringParser(file *codegen.File) {
 	}
 
 	for _, option := range e.Options {
-		clauses = append(clauses, codegen.Clause(file.Val(option.Value)).Do(
+		clauses = append(clauses, codegen.Clause(file.Val(*option.Str)).Do(
 			codegen.Return(
-				e.ConstValue(option.Value),
+				e.ConstName(*option.Str),
 				codegen.Nil,
 			),
 		))
@@ -181,7 +175,7 @@ func (e *Enum) WriteLabelStringParser(file *codegen.File) {
 	for _, option := range e.Options {
 		clauses = append(clauses, codegen.Clause(file.Val(option.Label)).Do(
 			codegen.Return(
-				e.ConstValue(option.Value),
+				e.ConstName(*option.Str),
 				codegen.Nil,
 			),
 		))
@@ -209,9 +203,9 @@ func (e *Enum) WriteStringer(file *codegen.File) {
 	}
 
 	for _, option := range e.Options {
-		clauses = append(clauses, codegen.Clause(e.ConstValue(option.Value)).Do(
+		clauses = append(clauses, codegen.Clause(e.ConstName(*option.Str)).Do(
 			codegen.Return(
-				file.Val(option.Value),
+				file.Val(*option.Str),
 			),
 		))
 	}
@@ -252,7 +246,7 @@ func (e *Enum) WriteLabeler(file *codegen.File) {
 	}
 
 	for _, option := range e.Options {
-		clauses = append(clauses, codegen.Clause(e.ConstValue(option.Value)).Do(
+		clauses = append(clauses, codegen.Clause(e.ConstName(*option.Str)).Do(
 			codegen.Return(
 				file.Val(option.Label),
 			),
@@ -283,7 +277,7 @@ func (e *Enum) WriteTypeNameAndConstValues(file *codegen.File) {
 		),
 	)
 
-	tpe := codegen.Slice(codegen.Type(file.Use("github.com/go-courier/enumeration", "Enum")))
+	tpe := codegen.Slice(codegen.Type(file.Use("github.com/go-courier/enumeration", "IntStringerEnum")))
 
 	list := []interface{}{
 		tpe,
@@ -291,14 +285,14 @@ func (e *Enum) WriteTypeNameAndConstValues(file *codegen.File) {
 	holder := "?"
 
 	sort.Slice(e.Options, func(i, j int) bool {
-		return e.Options[i].ConstValue < e.Options[j].ConstValue
+		return *e.Options[i].Int < *e.Options[j].Int
 	})
 
 	for i, o := range e.Options {
 		if i > 0 {
 			holder += ",?"
 		}
-		list = append(list, e.ConstValue(o.Value))
+		list = append(list, e.ConstName(*o.Str))
 	}
 
 	file.WriteBlock(
@@ -345,7 +339,7 @@ func (e *Enum) TextScanAndValuer(file *codegen.File) {
 	offsetExprs := file.Expr(`offset := 0
 if o, ok := (interface{})(v).(?); ok {
 	offset = o.Offset()
-}`, codegen.Id(file.Use("github.com/go-courier/enumeration", "EnumDriverValueOffset")))
+}`, codegen.Id(file.Use("github.com/go-courier/enumeration", "DriverValueOffset")))
 
 	file.WriteBlock(
 		codegen.Func().
@@ -373,9 +367,8 @@ if err != nil {
 	return err
 }
 *v = ?(i)
-return nil
-`,
-				codegen.Id(file.Use("github.com/go-courier/enumeration", "ScanEnum")),
+return nil`,
+				codegen.Id(file.Use("github.com/go-courier/enumeration", "ScanIntEnumStringer")),
 				codegen.Id(e.Name),
 			),
 		),

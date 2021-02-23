@@ -3,40 +3,10 @@ package enumeration_test
 import (
 	"testing"
 
-	"github.com/go-courier/enumeration/__examples__"
 	. "github.com/onsi/gomega"
 
 	"github.com/go-courier/enumeration"
 )
-
-func TestEnumMap(t *testing.T) {
-	NewWithT(t).Expect(examples.PROTOCOL__HTTP.String()).To(Equal("HTTP"))
-
-	list := enumeration.DefaultEnumMap.List()
-
-	NewWithT(t).Expect(list).To(Equal([]enumeration.EnumInfo{
-		{
-			TypeName: "github.com/go-courier/enumeration/__examples__.Protocol",
-			Options: []enumeration.EnumOption{
-				{
-					Value:      "HTTP",
-					Label:      "http",
-					ConstValue: examples.PROTOCOL__HTTP.Int(),
-				},
-				{
-					Value:      "HTTPS",
-					Label:      "https",
-					ConstValue: examples.PROTOCOL__HTTPS.Int(),
-				},
-				{
-					Value:      "TCP",
-					Label:      "TCP",
-					ConstValue: examples.PROTOCOL__TCP.Int(),
-				},
-			},
-		},
-	}))
-}
 
 func TestScanEnum(t *testing.T) {
 	cases := []struct {
@@ -81,7 +51,7 @@ func TestScanEnum(t *testing.T) {
 
 	for _, c := range cases {
 		for i, v := range c.values {
-			n, err := enumeration.ScanEnum(v, c.offset)
+			n, err := enumeration.ScanIntEnumStringer(v, c.offset)
 			NewWithT(t).Expect(err).To(BeNil())
 			NewWithT(t).Expect(n).To(Equal(c.expect[i]))
 		}
