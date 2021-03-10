@@ -1,4 +1,4 @@
-test:
+test: download
 	go test -v -race ./...
 
 cover:
@@ -6,3 +6,6 @@ cover:
 
 dep:
 	go get -u ./...
+
+download:
+	go mod download
