@@ -38,7 +38,7 @@ func NewIntOption(v int64, label string) *Option {
 	}
 
 	if label == "" {
-		o.Label = strconv.FormatInt(v, 64)
+		o.Label = strconv.FormatInt(v, 10)
 	}
 	return o
 }
